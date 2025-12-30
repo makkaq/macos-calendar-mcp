@@ -505,11 +505,15 @@ class MacOSCalendarServer {
     const formattedStart = this.formatDateForAppleScript(weekStart + ' 00:00');
     const formattedEnd = this.formatDateForAppleScript(endDate.toISOString().split('T')[0] + ' 00:00');
     
+    const startTimeScript = this.generateTimeScript(formattedStart, 'weekStart');
+    const endTimeScript = this.generateTimeScript(formattedEnd, 'weekEnd');
+    
     const script = `
       tell application "Calendar"
         set theCalendar to calendar "${calendar}"
-        set weekStart to date "${formattedStart}"
-        set weekEnd to date "${formattedEnd}"
+        
+        ${startTimeScript}
+        ${endTimeScript}
         
         set weekEvents to every event of theCalendar whose start date ≥ weekStart and start date < weekEnd
         
