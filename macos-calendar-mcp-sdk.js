@@ -309,7 +309,8 @@ class MacOSCalendarServer {
         if length of h < 2 then set h to "0" & h
         set mins to ((t mod 3600) div 60) as string
         if length of mins < 2 then set mins to "0" & mins
-        return y & "-" & m & "-" & d & " " & h & ":" & mins
+        set dayOfWeek to weekday of theDate as string
+        return dayOfWeek & ", " & y & "-" & m & "-" & d & " " & h & ":" & mins
       end formatDate
 
       on safeText(theValue)
@@ -489,15 +490,18 @@ class MacOSCalendarServer {
           set eventInfo to (summary of anEvent) & "|" & startStr & "|" & endStr & "|" & descStr & "|" & locStr
           set end of eventList to eventInfo
         end repeat
-
-        return eventList as string
       end tell
+
+      set text item delimiters to "~~~"
+      set output to eventList as string
+      set text item delimiters to ""
+      return output
     `;
 
     try {
       const result = execSync(`osascript -e '${script}'`, { encoding: 'utf8' });
       const events = result.trim();
-      
+
       if (!events || events === '""') {
         return {
           content: [
@@ -509,7 +513,7 @@ class MacOSCalendarServer {
         };
       }
 
-      const eventList = events.split(',').map(event => {
+      const eventList = events.split('~~~').map(event => {
         const [title, start, end, desc, loc] = event.trim().split('|');
         return `📝 ${title}\n🕒 ${start} - ${end}${loc ? `\n📍 ${loc}` : ''}${desc ? `\n📄 ${desc}` : ''}`;
       }).join('\n\n');
@@ -558,15 +562,18 @@ class MacOSCalendarServer {
           set eventInfo to (summary of anEvent) & "|" & startStr & "|" & endStr & "|" & locStr
           set end of eventList to eventInfo
         end repeat
-
-        return eventList as string
       end tell
+
+      set text item delimiters to "~~~"
+      set output to eventList as string
+      set text item delimiters to ""
+      return output
     `;
 
     try {
       const result = execSync(`osascript -e '${script}'`, { encoding: 'utf8' });
       const events = result.trim();
-      
+
       if (!events || events === '""') {
         return {
           content: [
@@ -578,7 +585,7 @@ class MacOSCalendarServer {
         };
       }
 
-      const eventList = events.split(',').map(event => {
+      const eventList = events.split('~~~').map(event => {
         const [title, start, end, loc] = event.trim().split('|');
         return `📝 ${title}\n🕒 ${start} - ${end}${loc ? `\n📍 ${loc}` : ''}`;
       }).join('\n\n');
@@ -616,15 +623,18 @@ class MacOSCalendarServer {
             set end of matchingEvents to eventInfo
           end if
         end repeat
-
-        return matchingEvents as string
       end tell
+
+      set text item delimiters to "~~~"
+      set output to matchingEvents as string
+      set text item delimiters to ""
+      return output
     `;
 
     try {
       const result = execSync(`osascript -e '${script}'`, { encoding: 'utf8' });
       const events = result.trim();
-      
+
       if (!events || events === '""') {
         return {
           content: [
@@ -636,7 +646,7 @@ class MacOSCalendarServer {
         };
       }
 
-      const eventList = events.split(',').map(event => {
+      const eventList = events.split('~~~').map(event => {
         const [title, start, end, desc, loc] = event.trim().split('|');
         return `📝 ${title}\n🕒 ${start} - ${end}${loc ? `\n📍 ${loc}` : ''}${desc ? `\n📄 ${desc}` : ''}`;
       }).join('\n\n');
@@ -645,7 +655,7 @@ class MacOSCalendarServer {
         content: [
           {
             type: 'text',
-            text: `🔍 在 ${calendar} 中找到 ${events.split(',').length} 个匹配事件:\n\n${eventList}`,
+            text: `🔍 在 ${calendar} 中找到 ${events.split('~~~').length} 个匹配事件:\n\n${eventList}`,
           },
         ],
       };
