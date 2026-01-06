@@ -295,6 +295,33 @@ class MacOSCalendarServer {
     `;
   }
 
+  // AppleScript helpers for formatting dates and handling missing values
+  getAppleScriptHelpers() {
+    return `
+      on formatDate(theDate)
+        set y to year of theDate as string
+        set m to (month of theDate as integer) as string
+        if length of m < 2 then set m to "0" & m
+        set d to day of theDate as string
+        if length of d < 2 then set d to "0" & d
+        set t to time of theDate
+        set h to (t div 3600) as string
+        if length of h < 2 then set h to "0" & h
+        set mins to ((t mod 3600) div 60) as string
+        if length of mins < 2 then set mins to "0" & mins
+        return y & "-" & m & "-" & d & " " & h & ":" & mins
+      end formatDate
+
+      on safeText(theValue)
+        if theValue is missing value then
+          return ""
+        else
+          return theValue as string
+        end if
+      end safeText
+    `;
+  }
+
   async listCalendars() {
     try {
       const script = `tell application "Calendar" to get name of calendars`;
@@ -445,19 +472,24 @@ class MacOSCalendarServer {
     const { calendar = '个人' } = args;
     
     const script = `
+      ${this.getAppleScriptHelpers()}
       tell application "Calendar"
         set theCalendar to calendar "${calendar}"
         set todayStart to (current date) - (time of (current date))
         set todayEnd to todayStart + (24 * hours) - 1
-        
+
         set todayEvents to every event of theCalendar whose start date ≥ todayStart and start date ≤ todayEnd
-        
+
         set eventList to {}
         repeat with anEvent in todayEvents
-          set eventInfo to (summary of anEvent) & "|" & (start date of anEvent) & "|" & (end date of anEvent) & "|" & (description of anEvent) & "|" & (location of anEvent)
+          set startStr to my formatDate(start date of anEvent)
+          set endStr to my formatDate(end date of anEvent)
+          set descStr to my safeText(description of anEvent)
+          set locStr to my safeText(location of anEvent)
+          set eventInfo to (summary of anEvent) & "|" & startStr & "|" & endStr & "|" & descStr & "|" & locStr
           set end of eventList to eventInfo
         end repeat
-        
+
         return eventList as string
       end tell
     `;
@@ -509,20 +541,24 @@ class MacOSCalendarServer {
     const endTimeScript = this.generateTimeScript(formattedEnd, 'weekEnd');
     
     const script = `
+      ${this.getAppleScriptHelpers()}
       tell application "Calendar"
         set theCalendar to calendar "${calendar}"
-        
+
         ${startTimeScript}
         ${endTimeScript}
-        
+
         set weekEvents to every event of theCalendar whose start date ≥ weekStart and start date < weekEnd
-        
+
         set eventList to {}
         repeat with anEvent in weekEvents
-          set eventInfo to (summary of anEvent) & "|" & (start date of anEvent) & "|" & (end date of anEvent) & "|" & (location of anEvent)
+          set startStr to my formatDate(start date of anEvent)
+          set endStr to my formatDate(end date of anEvent)
+          set locStr to my safeText(location of anEvent)
+          set eventInfo to (summary of anEvent) & "|" & startStr & "|" & endStr & "|" & locStr
           set end of eventList to eventInfo
         end repeat
-        
+
         return eventList as string
       end tell
     `;
@@ -564,18 +600,23 @@ class MacOSCalendarServer {
     const { query, calendar = '个人' } = args;
     
     const script = `
+      ${this.getAppleScriptHelpers()}
       tell application "Calendar"
         set theCalendar to calendar "${calendar}"
         set allEvents to every event of theCalendar
-        
+
         set matchingEvents to {}
         repeat with anEvent in allEvents
           if (summary of anEvent) contains "${query}" or (description of anEvent) contains "${query}" then
-            set eventInfo to (summary of anEvent) & "|" & (start date of anEvent) & "|" & (end date of anEvent) & "|" & (description of anEvent) & "|" & (location of anEvent)
+            set startStr to my formatDate(start date of anEvent)
+            set endStr to my formatDate(end date of anEvent)
+            set descStr to my safeText(description of anEvent)
+            set locStr to my safeText(location of anEvent)
+            set eventInfo to (summary of anEvent) & "|" & startStr & "|" & endStr & "|" & descStr & "|" & locStr
             set end of matchingEvents to eventInfo
           end if
         end repeat
-        
+
         return matchingEvents as string
       end tell
     `;
